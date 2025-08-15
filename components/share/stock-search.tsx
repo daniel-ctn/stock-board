@@ -1,8 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Search } from 'lucide-react'
+import { useState } from 'react'
+import { Loader2, Search } from 'lucide-react'
+import { useDebounce } from 'use-debounce'
 
+import { useStockSearch } from '@/hooks/use-stock-data'
 import { Button } from '@/components/ui/button'
 import {
   Command,
@@ -17,11 +19,6 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 
-interface SearchResult {
-  symbol: string
-  description: string
-}
-
 interface StockSearchProps {
   onSelect: (symbol: string) => void
 }
@@ -29,41 +26,15 @@ interface StockSearchProps {
 export function StockSearch({ onSelect }: StockSearchProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<SearchResult[]>([])
-  const [loading, setLoading] = useState(false)
+  const [debouncedQuery] = useDebounce(query, 300)
 
-  useEffect(() => {
-    const searchStocks = async () => {
-      if (query.length < 2) {
-        setResults([])
-        return
-      }
+  const { results, isLoading, error } = useStockSearch(debouncedQuery)
 
-      setLoading(true)
-      try {
-        // Mock search - replace with actual API call
-        const mockResults: SearchResult[] = [
-          { symbol: 'AAPL', description: 'Apple Inc.' },
-          { symbol: 'GOOGL', description: 'Alphabet Inc.' },
-          { symbol: 'MSFT', description: 'Microsoft Corporation' },
-          { symbol: 'TSLA', description: 'Tesla, Inc.' },
-        ].filter(
-          (stock) =>
-            stock.symbol.toLowerCase().includes(query.toLowerCase()) ||
-            stock.description.toLowerCase().includes(query.toLowerCase()),
-        )
-
-        setResults(mockResults)
-      } catch (error) {
-        console.error('Search failed:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    const debounceTimer = setTimeout(searchStocks, 300)
-    return () => clearTimeout(debounceTimer)
-  }, [query])
+  const handleSelect = (symbol: string) => {
+    onSelect(symbol)
+    setOpen(false)
+    setQuery('')
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -81,21 +52,33 @@ export function StockSearch({ onSelect }: StockSearchProps) {
             onValueChange={setQuery}
           />
           <CommandEmpty>
-            {loading ? 'Searching...' : 'No stocks found.'}
+            {isLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="ml-2">Searching...</span>
+              </div>
+            ) : error ? (
+              <div className="py-6 text-center text-sm text-red-500">
+                Search failed. Please try again.
+              </div>
+            ) : query.length < 2 ? (
+              <div className="py-6 text-center text-sm">
+                Type at least 2 characters to search
+              </div>
+            ) : (
+              <div className="py-6 text-center text-sm">No stocks found</div>
+            )}
           </CommandEmpty>
           <CommandGroup>
             {results.map((stock) => (
               <CommandItem
                 key={stock.symbol}
-                onSelect={() => {
-                  onSelect(stock.symbol)
-                  setOpen(false)
-                  setQuery('')
-                }}
+                onSelect={() => handleSelect(stock.symbol)}
+                className="cursor-pointer"
               >
                 <div>
-                  <p className="font-medium">{stock.symbol}</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="font-medium">{stock.displaySymbol}</p>
+                  <p className="text-sm text-muted-foreground truncate">
                     {stock.description}
                   </p>
                 </div>

@@ -2,9 +2,10 @@ import './globals.css'
 
 import { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import { SWRConfig } from 'swr'
 
 import { Navbar } from '@/components/layout/navbar'
-import { ThemeProvider } from '@/components/layout/theme-privider'
+import { ThemeProvider } from '@/components/layout/theme-provider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -22,8 +23,20 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <Navbar />
-          <main className="container mx-auto px-4 py-6">{children}</main>
+          <SWRConfig
+            value={{
+              refreshInterval: 30000, // 30 seconds
+              revalidateOnFocus: false,
+              errorRetryInterval: 5000,
+              errorRetryCount: 3,
+              onError: (error) => {
+                console.error('SWR Error:', error)
+              },
+            }}
+          >
+            <Navbar />
+            <main className="container mx-auto px-4 py-6">{children}</main>
+          </SWRConfig>
         </ThemeProvider>
       </body>
     </html>

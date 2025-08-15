@@ -1,60 +1,45 @@
 'use client'
 
 import { useState } from 'react'
+import { AlertCircle, Loader2 } from 'lucide-react'
 
+import { useMultipleStocks } from '@/hooks/use-stock-data'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { StockCard } from '@/components/share/stock-card'
 import { StockSearch } from '@/components/share/stock-search'
-import { Stock } from '@/types/stock'
 
-// Mock data - replace with real API calls
-const mockStocks: Stock[] = [
-  {
-    symbol: 'AAPL',
-    name: 'Apple Inc.',
-    price: 182.52,
-    change: 2.34,
-    changePercent: 1.3,
-    volume: 45234567,
-    previousClose: 180.18,
-    open: 181.25,
-    high: 184.12,
-    low: 180.89,
-  },
-  {
-    symbol: 'GOOGL',
-    name: 'Alphabet Inc.',
-    price: 142.56,
-    change: -1.23,
-    changePercent: -0.85,
-    volume: 23456789,
-    previousClose: 143.79,
-    open: 143.25,
-    high: 144.12,
-    low: 141.89,
-  },
-  // Add more mock stocks...
+const DEFAULT_SYMBOLS = [
+  'AAPL',
+  'GOOGL',
+  'MSFT',
+  'TSLA',
+  'AMZN',
+  'META',
+  'NVDA',
+  'NFLX',
 ]
 
 export default function Dashboard() {
-  const [stocks, setStocks] = useState<Stock[]>(mockStocks)
-  const [selectedStock, setSelectedStock] = useState<string>('')
+  const [watchedSymbols, setWatchedSymbols] =
+    useState<string[]>(DEFAULT_SYMBOLS)
+
+  const { stocks, isLoading } = useMultipleStocks(watchedSymbols)
 
   const handleAddToWatchlist = (symbol: string) => {
-    console.log('Adding to watchlist:', symbol)
-    // Implement watchlist logic
-  }
-
-  const handleAddToPortfolio = (symbol: string) => {
-    console.log('Adding to portfolio:', symbol)
-    // Implement portfolio logic
+    if (!watchedSymbols.includes(symbol.toUpperCase())) {
+      setWatchedSymbols((prev) => [...prev, symbol.toUpperCase()])
+    }
   }
 
   const handleSearchSelect = (symbol: string) => {
-    setSelectedStock(symbol)
-    // Fetch and display selected stock
+    handleAddToWatchlist(symbol)
   }
+
+  // Separate successful stocks from errors
+  const successfulStocks = stocks.filter((item) => !('error' in item))
+  const failedStocks = stocks.filter((item) => 'error' in item)
 
   return (
     <div className="space-y-6">
@@ -63,7 +48,7 @@ export default function Dashboard() {
         <div>
           <h1 className="text-3xl font-bold">Market Dashboard</h1>
           <p className="text-muted-foreground">
-            Real-time stock market data and analytics
+            Real-time stock market data powered by Finnhub
           </p>
         </div>
         <div className="w-full sm:w-80">
@@ -71,57 +56,71 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Market Overview */}
+      {/* Error Display */}
+      {failedStocks.length > 0 && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Failed to load data for:{' '}
+            {failedStocks.map((item) => item.symbol).join(', ')}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Market Overview - You can add real market indices here */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">S&P 500</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">4,567.89</div>
-            <p className="text-xs text-green-600">+1.23% (+12.34)</p>
+            <div className="text-2xl font-bold">Loading...</div>
+            <p className="text-xs text-muted-foreground">
+              Real-time data coming soon
+            </p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">NASDAQ</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">14,234.56</div>
-            <p className="text-xs text-red-600">-0.45% (-23.45)</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">DOW JONES</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">34,567.89</div>
-            <p className="text-xs text-green-600">+0.78% (+23.45)</p>
-          </CardContent>
-        </Card>
+        {/* Add more market indices */}
       </div>
 
+      {/* Loading State */}
+      {isLoading && successfulStocks.length === 0 && (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Loading market data...</span>
+        </div>
+      )}
+
       {/* Main Content */}
-      <Tabs defaultValue="trending" className="space-y-4">
+      <Tabs defaultValue="watchlist" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="watchlist">Watchlist</TabsTrigger>
           <TabsTrigger value="trending">Trending</TabsTrigger>
           <TabsTrigger value="gainers">Top Gainers</TabsTrigger>
           <TabsTrigger value="losers">Top Losers</TabsTrigger>
-          <TabsTrigger value="volume">Most Active</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="trending" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {stocks.map((stock) => (
-              <StockCard
-                key={stock.symbol}
-                stock={stock}
-                onAddToWatchlist={handleAddToWatchlist}
-                onAddToPortfolio={handleAddToPortfolio}
-              />
-            ))}
-          </div>
+        <TabsContent value="watchlist" className="space-y-4">
+          {successfulStocks.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {successfulStocks.map((stock) => (
+                <StockCard
+                  key={stock.symbol}
+                  stock={stock}
+                  onAddToWatchlist={handleAddToWatchlist}
+                  onAddToPortfolio={() =>
+                    console.log('Add to portfolio:', stock.symbol)
+                  }
+                />
+              ))}
+            </div>
+          ) : !isLoading ? (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">
+                No stocks in your watchlist
+              </p>
+            </div>
+          ) : null}
         </TabsContent>
 
         {/* Add other tab contents */}
