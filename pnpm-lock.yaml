@@ -26,6 +26,9 @@ dependencies:
   '@radix-ui/react-tabs':
     specifier: ^1.1.13
     version: 1.1.13(@types/react-dom@19.1.7)(@types/react@19.1.10)(react-dom@19.1.0)(react@19.1.0)
+  '@types/d3-format':
+    specifier: ^3.0.4
+    version: 3.0.4
   class-variance-authority:
     specifier: ^0.7.1
     version: 0.7.1
@@ -35,6 +38,9 @@ dependencies:
   cmdk:
     specifier: ^1.1.1
     version: 1.1.1(@types/react-dom@19.1.7)(@types/react@19.1.10)(react-dom@19.1.0)(react@19.1.0)
+  d3-format:
+    specifier: ^3.1.0
+    version: 3.1.0
   date-fns:
     specifier: ^4.1.0
     version: 4.1.0
@@ -1598,6 +1604,10 @@ packages:
 
   /@types/d3-ease@3.0.2:
     resolution: {integrity: sha512-NcV1JjO5oDzoK26oMzbILE6HW7uVXOHLQvHshBUW4UMdZGfiY6v5BeQwh9a9tCzv+CeefZQHJt5SRgK154RtiA==}
+    dev: false
+
+  /@types/d3-format@3.0.4:
+    resolution: {integrity: sha512-fALi2aI6shfg7vM5KiR1wNJnZ7r6UuggVqtDA+xiEdPZQwy/trcQaHnwShLuLdta2rTymCNpxYTiMZX/e09F4g==}
     dev: false
 
   /@types/d3-interpolate@3.0.4:

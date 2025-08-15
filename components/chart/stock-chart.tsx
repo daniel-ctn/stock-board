@@ -1,0 +1,351 @@
+'use client'
+
+import { useMemo, useState } from 'react'
+import { Settings, TrendingDown, TrendingUp } from 'lucide-react'
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
+
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ChartTypeSelector } from '@/components/chart/chart-type.selector'
+import { ChartTooltip } from '@/components/chart/chart.tooltip'
+import { ChartDataPoint, ChartPeriod, ChartType, Stock } from '@/types/stock'
+import { formatChartDate, formatPrice } from '@/lib/chart-utils'
+
+import { ChartPeriodSelector } from './chart-period-selector'
+
+interface StockChartProps {
+  stock: Stock
+  data: ChartDataPoint[]
+  loading?: boolean
+}
+
+// Mock data generator for demonstration
+const generateMockChartData = (
+  symbol: string,
+  period: ChartPeriod,
+): ChartDataPoint[] => {
+  const basePrice = 150
+  const dataPoints =
+    period === '1D' ? 390 : period === '1W' ? 7 : period === '1M' ? 30 : 252
+  const data: ChartDataPoint[] = []
+
+  for (let i = 0; i < dataPoints; i++) {
+    const date = new Date()
+    date.setDate(date.getDate() - (dataPoints - i))
+
+    const randomVariation = (Math.random() - 0.5) * 10
+    const open = i === 0 ? basePrice : data[i - 1].close
+    const close = open + randomVariation
+    const high = Math.max(open, close) + Math.random() * 5
+    const low = Math.min(open, close) - Math.random() * 5
+    const volume = Math.floor(Math.random() * 10000000) + 1000000
+
+    data.push({
+      timestamp: date.toISOString(),
+      date,
+      open,
+      high,
+      low,
+      close,
+      volume,
+    })
+  }
+
+  return data
+}
+
+export function StockChart({
+  stock,
+  data: propData,
+  loading = false,
+}: StockChartProps) {
+  const [period, setPeriod] = useState<ChartPeriod>('1M')
+  const [chartType, setChartType] = useState<ChartType>('line')
+  const [showVolume, setShowVolume] = useState(false)
+  const [showIndicators, setShowIndicators] = useState(false)
+
+  // Use mock data if no real data provided
+  const chartData = useMemo(() => {
+    return propData.length > 0
+      ? propData
+      : generateMockChartData(stock.symbol, period)
+  }, [propData, stock.symbol, period])
+
+  const formattedData = useMemo(() => {
+    return chartData.map((point) => ({
+      ...point,
+      formattedDate: formatChartDate(point.timestamp, period),
+    }))
+  }, [chartData, period])
+
+  const priceChange = useMemo(() => {
+    if (formattedData.length < 2) return { change: 0, changePercent: 0 }
+    const first = formattedData[0].close
+    const last = formattedData[formattedData.length - 1].close
+    const change = last - first
+    const changePercent = (change / first) * 100
+    return { change, changePercent }
+  }, [formattedData])
+
+  const renderChart = () => {
+    const commonProps = {
+      data: formattedData,
+      margin: { top: 5, right: 30, left: 20, bottom: 5 },
+    }
+
+    switch (chartType) {
+      case 'line':
+        return (
+          <LineChart {...commonProps}>
+            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+            <XAxis
+              dataKey="formattedDate"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12 }}
+            />
+            <YAxis
+              domain={['dataMin - 1', 'dataMax + 1']}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12 }}
+              tickFormatter={formatPrice}
+            />
+            <Tooltip content={<ChartTooltip chartType="line" />} />
+            <Line
+              type="monotone"
+              dataKey="close"
+              stroke="hsl(var(--primary))"
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4, stroke: 'hsl(var(--primary))' }}
+            />
+          </LineChart>
+        )
+
+      case 'area':
+        return (
+          <AreaChart {...commonProps}>
+            <defs>
+              <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
+                <stop
+                  offset="5%"
+                  stopColor="hsl(var(--primary))"
+                  stopOpacity={0.3}
+                />
+                <stop
+                  offset="95%"
+                  stopColor="hsl(var(--primary))"
+                  stopOpacity={0}
+                />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+            <XAxis
+              dataKey="formattedDate"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12 }}
+            />
+            <YAxis
+              domain={['dataMin - 1', 'dataMax + 1']}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12 }}
+              tickFormatter={formatPrice}
+            />
+            <Tooltip content={<ChartTooltip chartType="area" />} />
+            <Area
+              type="monotone"
+              dataKey="close"
+              stroke="hsl(var(--primary))"
+              strokeWidth={2}
+              fillOpacity={1}
+              fill="url(#colorPrice)"
+            />
+          </AreaChart>
+        )
+
+      case 'candlestick':
+        return (
+          <BarChart {...commonProps}>
+            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+            <XAxis
+              dataKey="formattedDate"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12 }}
+            />
+            <YAxis
+              domain={['dataMin - 2', 'dataMax + 2']}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12 }}
+              tickFormatter={formatPrice}
+            />
+            <Tooltip content={<ChartTooltip chartType="candlestick" />} />
+            <Bar
+              dataKey="high"
+              fill="transparent"
+              stroke="hsl(var(--muted-foreground))"
+              strokeWidth={1}
+            />
+            <Bar dataKey="close" fill="#22c55e" />
+          </BarChart>
+        )
+
+      case 'volume':
+        return (
+          <BarChart {...commonProps}>
+            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+            <XAxis
+              dataKey="formattedDate"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12 }}
+            />
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12 }}
+              tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`}
+            />
+            <Tooltip content={<ChartTooltip chartType="volume" />} />
+            <Bar dataKey="volume" fill="hsl(var(--primary))" opacity={0.7} />
+          </BarChart>
+        )
+
+      default:
+        return (
+          <LineChart {...commonProps}>
+            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+            <XAxis
+              dataKey="formattedDate"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12 }}
+            />
+            <YAxis
+              domain={['dataMin - 1', 'dataMax + 1']}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12 }}
+              tickFormatter={formatPrice}
+            />
+            <Tooltip content={<ChartTooltip chartType="line" />} />
+            <Line
+              type="monotone"
+              dataKey="close"
+              stroke="hsl(var(--primary))"
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4, stroke: 'hsl(var(--primary))' }}
+            />
+          </LineChart>
+        )
+    }
+  }
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-base font-medium">
+            Loading chart...
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-80 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <div className="flex items-center space-x-4">
+          <CardTitle className="text-lg font-semibold">
+            {stock.symbol} - {formatPrice(stock.price)}
+          </CardTitle>
+          <Badge variant={priceChange.change >= 0 ? 'default' : 'destructive'}>
+            {priceChange.change >= 0 ? (
+              <TrendingUp className="w-3 h-3 mr-1" />
+            ) : (
+              <TrendingDown className="w-3 h-3 mr-1" />
+            )}
+            {priceChange.change >= 0 ? '+' : ''}
+            {priceChange.change.toFixed(2)}(
+            {priceChange.changePercent.toFixed(2)}%)
+          </Badge>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowIndicators(!showIndicators)}
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+          <ChartPeriodSelector
+            selectedPeriod={period}
+            onPeriodChange={setPeriod}
+          />
+          <div className="flex items-center space-x-2">
+            <ChartTypeSelector
+              selectedType={chartType}
+              onTypeChange={setChartType}
+            />
+            <Button
+              variant={showVolume ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setShowVolume(!showVolume)}
+            >
+              Volume
+            </Button>
+          </div>
+        </div>
+
+        <div className="h-80 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            {renderChart()}
+          </ResponsiveContainer>
+        </div>
+
+        {showVolume && chartType !== 'volume' && (
+          <div className="h-20 w-full mt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={formattedData}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <XAxis dataKey="formattedDate" hide />
+                <YAxis hide />
+                <Bar dataKey="volume" fill="hsl(var(--muted))" opacity={0.7} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}

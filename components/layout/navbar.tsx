@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { BarChart3, Briefcase, Heart, Search, TrendingUp } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { ModeToggle } from '@/components/mode-toggle'
+import { ThemeToggle } from '@/components/layout/theme-toggle'
 
 export function Navbar() {
   return (
@@ -50,7 +50,7 @@ export function Navbar() {
           <Button variant="outline" size="sm">
             Sign In
           </Button>
-          <ModeToggle />
+          <ThemeToggle />
         </div>
       </div>
     </nav>
