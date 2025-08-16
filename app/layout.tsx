@@ -28,10 +28,6 @@ export default function RootLayout({
               refreshInterval: 30000, // 30 seconds
               revalidateOnFocus: false,
               errorRetryInterval: 5000,
-              errorRetryCount: 3,
-              onError: (error) => {
-                console.error('SWR Error:', error)
-              },
             }}
           >
             <Navbar />

@@ -91,6 +91,57 @@ export function useStockSearch(query: string) {
   }
 }
 
+export function useCompanyProfile(symbol: string) {
+  const { data, error, isLoading, mutate } = useSWR(
+    symbol ? `company-profile-${symbol}` : null,
+    () => finnhubAPI.getProfile(symbol),
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 300000, // Cache for 5 minutes - company profile doesn't change often
+      errorRetryCount: 2,
+      errorRetryInterval: 5000,
+      onError: () => {
+        // Silently handle errors for company profile - it's optional data
+      },
+    },
+  )
+
+  return {
+    profile: data,
+    isLoading,
+    error,
+    refresh: mutate,
+  }
+}
+
+export function useCompanyNews(symbol: string) {
+  // Get date range for last 7 days
+  const to = new Date().toISOString().split('T')[0]
+  const from = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  
+  const { data, error, isLoading, mutate } = useSWR(
+    symbol ? `company-news-${symbol}-${from}-${to}` : null,
+    () => finnhubAPI.getCompanyNews(symbol, from, to),
+    {
+      refreshInterval: 900000, // Refresh every 15 minutes
+      revalidateOnFocus: false,
+      dedupingInterval: 300000, // Cache for 5 minutes
+      errorRetryCount: 2,
+      errorRetryInterval: 5000,
+      onError: () => {
+        // Silently handle errors for company news - it's optional data
+      },
+    },
+  )
+
+  return {
+    news: data?.slice(0, 5) || [], // Return latest 5 news items
+    isLoading,
+    error,
+    refresh: mutate,
+  }
+}
+
 export function useMultipleStocks(symbols: string[]) {
   const { data, error, isLoading, mutate } = useSWR(
     symbols.length > 0 ? `multiple-stocks-${symbols.join(',')}` : null,
